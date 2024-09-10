@@ -1,3 +1,12 @@
+"""
+Title: analysis script
+Description: This script contains several functions for post processing siesta/tdap runs, the most useful one being get_bondlength 
+             
+Author: Connor Herring
+
+Usage: intended for notebooks or helper scripts to make use of these functions
+"""
+
 import numpy as np
 import numpy.fft as npf 
 import matplotlib.pyplot as plt
@@ -6,6 +15,7 @@ from statistics import mean
 import plotly.express as px
 import plotly.graph_objects as go
 from hirshfeld_charge import *
+import os
 
 dt = 0.0242 #in fs (same as 0.5 hbar/Ry)
 #dt = 1 #in fs
@@ -154,8 +164,12 @@ def plot_energy(path):
 #used for ANI file ****atom1 number must precede atom2**** result is in Ang
 def get_bondlength(path, atom1, atom2):
 	time_step = dt
-	filename = path + '/siesta.ANI'
-	f = open(filename, 'r')
+	for i in os.listdir(path):
+		if i.endswith(".ANI") and i.startswith("siesta"):
+			filename = i
+
+	#filename = path + '/siesta.ANI'
+	f = open(path +'/'+ filename, 'r')
 	Lines = f.readlines()	
 	current_line = 0
 	bond_length = []
