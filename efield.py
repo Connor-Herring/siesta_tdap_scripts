@@ -1,11 +1,11 @@
-import math
 import matplotlib.pyplot as plt
 import numpy as np 
 import math
 from statistics import mean
 import plotly.express as px
 import plotly.graph_objects as go
-
+import sys
+import argparse
 
 #####################PARAMETERS######################
 G = 1 #gaussian coef
@@ -54,10 +54,12 @@ def plot_calculated_efield():
 
 #returns the calculated external field at time t (fs)
 def calculate_efield_at(Time):
+	Time = float(Time)
 	t_diff =Time - t0
 	term1 = (G/(normalization_term))*math.exp(-((Time-t0)**2)/(2*(sigma)**2)) + H*np.heaviside(t_diff, 1)
 	term2 = A*math.sin(omega*(Time-t0) -phi) + C
 	efield = float(term1*term2)
+	print(efield)
 	return efield
 
 #used to find the maximum value of the external field saved at the frequency of WFZs
@@ -247,4 +249,17 @@ def plot_vector_potential_values(path):
 	    )
 	fig6.update_layout(autotypenumbers='convert types')
 	fig6.show()
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Run a specific function with arguments.")
+    parser.add_argument("function", type=str, help="Name of the function to run")
+    parser.add_argument("args", nargs="*", help="Arguments to pass to the function")
+    
+    args = parser.parse_args()
+
+    # Dynamically call the function with arguments
+    if args.function in globals():
+        globals()[args.function](*args.args)
+    else:
+        print(f"No such function: {args.function}")
 
