@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oscillating Electric Field</title>
+    <style>
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        canvas {
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px; /* Space between grid items */
+            max-width: 600px; /* Optional: Control container width */
+        }
+        .controls label {
+            margin: 0 10px;
+        }
+        input[type="number"] {
+            width: 100%; /* Input fills the grid cell */
+            box-sizing: border-box; /* Includes padding and border in width */
+        }
+
+        button {
+            grid-column: span 2; /* Button spans across two columns */
+            justify-self: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <canvas id="fieldCanvas" width="800" height="200"></canvas>
+        <canvas id="graphCanvas" width="800" height="200"></canvas>
+    </div>
+    <div class="controls">
+        <label>G: <input type="number" id="G" value="1" step="0.1"></label>
+        <label>H: <input type="number" id="H" value="0" step="0.1"></label>
+        <label>A: <input type="number" id="A" value="1" step="0.1"></label>
+        <label>ω (omega): <input type="number" id="omega" value="2" step="0.1"></label>
+        <label>φ (phi): <input type="number" id="phi" value="0" step="0.1"></label>
+        <label>σ (sigma): <input type="number" id="sigma" value="15" step="0.1"></label>
+        <label>t₀: <input type="number" id="t0" value="65" step="0.1"></label>
+        <label>C: <input type="number" id="C" value="0" step="0.1"></label>
+        <label>maxTime: <input type="number" id="maxTime" value="125" step="0.1"></label>
+        <button onclick="restartAnimation()">Restart</button>
+    </div>
+    <script>
+        const fieldCanvas = document.getElementById('fieldCanvas');
+        const graphCanvas = document.getElementById('graphCanvas');
+        const fieldCtx = fieldCanvas.getContext('2d');
+        const graphCtx = graphCanvas.getContext('2d');
+
+        const GInput = document.getElementById('G');
+        const HInput = document.getElementById('H');
+        const AInput = document.getElementById('A');
+        const omegaInput = document.getElementById('omega');
+        const phiInput = document.getElementById('phi');
+        const sigmaInput = document.getElementById('sigma');
+        const t0Input = document.getElementById('t0');
+        const CInput = document.getElementById('C');
+        const maxTimeInput = document.getElementById('maxTime');
+
+        const width = fieldCanvas.width;
+        const height = fieldCanvas.height;
+        const graphWidth = graphCanvas.width;
+        const graphHeight = graphCanvas.height;
+
+        let time = 0;
+        const timeStep = 0.05;
+        const normalizationTerm = 1; // Placeholder, adjust as needed
+        const EValues = [];
+        const timeValues = [];
+
+        function getMaxTime() {
+            return parseFloat(maxTimeInput.value);
+        }
+
+        function gaussianPulse(t, t0, sigma, G, H) {
+            const tDiff = t - t0;
+            const gaussian = (G / normalizationTerm) * Math.exp(-Math.pow(tDiff, 2) / (2 * Math.pow(sigma, 2)));
+            const heaviside = H * (tDiff > 0 ? 1 : 0);
+            return gaussian + heaviside;
+        }
+
+        function oscillation(t, t0, A, omega, phi, C) {
+            return A * Math.sin(omega * (t - t0) - phi) + C;
+        }
+
+        function calculateElectricField(t) {
+            const G = parseFloat(GInput.value);
+            const H = parseFloat(HInput.value);
+            const A = parseFloat(AInput.value);
+            const omega = parseFloat(omegaInput.value);
+            const phi = parseFloat(phiInput.value);
+            const sigma = parseFloat(sigmaInput.value);
+            const t0 = parseFloat(t0Input.value);
+            const C = parseFloat(CInput.value);
+
+            const term1 = gaussianPulse(t, t0, sigma, G, H);
+            const term2 = oscillation(t, t0, A, omega, phi, C);
+            return term1 * term2;
+        }
+
+        function drawField(currentTime, currentE) {
+            fieldCtx.clearRect(0, 0, width, height);
+            fieldCtx.beginPath();
+            fieldCtx.moveTo(0, height / 2);
+
+            for (let x = 0; x < width; x++) {
+                const t = (time + x / width) * maxTime / width;
+                //const E = calculateElectricField(t);
+                const E = calculateElectricField(currentTime);
+                const y = height / 2 - E * 100; // Scale for visibility
+                fieldCtx.lineTo(x, y);
+            }
+
+            fieldCtx.strokeStyle = 'blue';
+            fieldCtx.lineWidth = 2;
+            fieldCtx.stroke();
+
+            // Add current time and field value
+            fieldCtx.font = '16px Arial';
+            fieldCtx.fillStyle = 'black';
+            fieldCtx.fillText(`Time: ${currentTime.toFixed(2)} fs`, 10, 20);
+            fieldCtx.fillText(`Field Value: ${currentE.toFixed(3)}`, 10, 40);
+        }
+
+        function drawGraph() {
+            graphCtx.clearRect(0, 0, graphWidth, graphHeight);
+
+            graphCtx.beginPath();
+            graphCtx.moveTo(0, graphHeight / 2);
+
+            for (let i = 0; i < EValues.length; i++) {
+                const x = (i / EValues.length) * graphWidth;
+                const y = graphHeight / 2 - EValues[i] * 100; // Scale for visibility
+                graphCtx.lineTo(x, y);
+            }
+
+            graphCtx.strokeStyle = 'red';
+            graphCtx.lineWidth = 2;
+            graphCtx.stroke();
+
+        }
+
+        function animate() {
+
+            if (time >= getMaxTime()) return;
+
+            const E = calculateElectricField(time);
+            EValues.push(E);
+            timeValues.push(time);
+
+            drawField(time, E);
+            drawGraph();
+
+            time += timeStep;
+            requestAnimationFrame(animate);
+        }
+
+        function restartAnimation() {
+            time = 0;
+            EValues.length = 0;
+            timeValues.length = 0;
+            animate();
+        }
+
+        restartAnimation();
+    </script>
+
+    <div>
+    <p>The electric field is given by:</p>
+    <div>
+        $$E(t) = \left( \frac{G}{\sqrt{2\pi}\sigma} e^{-\frac{(t - t_0)^2}{2\sigma^2}} + H \Theta(t - t_0) \right) \cdot \left( A \sin(\omega (t - t_0) - \phi) + C \right)$$
+    </div>
+</div>
+<div class="main-content">
+        <section>
+            <a href="Academic_Projects.html" target="_self">return to website</a>
+        </section>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js"></script>
+</html>
